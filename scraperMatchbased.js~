@@ -168,7 +168,7 @@ casper.then(function() {
 				    return matchstats; 
 			}, pname); 
 			//console.log(casper.getPageContent());
-			//console.log('Result: ' + JSON.stringify(res));
+			console.log('Result: ' + JSON.stringify(res));
 			
 			/* Postprocess result line */
 			for(i = 0; i<res.length; i++)
