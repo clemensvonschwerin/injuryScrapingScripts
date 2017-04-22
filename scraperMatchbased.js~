@@ -1,12 +1,12 @@
 /* Scraper using the casperjs framework with phantomjs */
-/* run: casperjs scraperMatchbased.js > out.json */
+/* run: casperjs scraperMatchbased.js > matchresults.json */
 
 var casper = require('casper').create();
-var players;
+var links;
 var matchstats;
 
 //Returns the link to every BBL player's personal profile page
-function getPlayerPageLink() {
+function getPlayerPageLinks() {
     // Scrape player names and profile link
     var playerCells = document.querySelectorAll('.aleft.footable-visible');
     return Array.prototype.map.call(playerCells, function (e) {
@@ -14,7 +14,7 @@ function getPlayerPageLink() {
     	while(elem && elem.tagName != 'A')
     		elem = elem.nextElementSibling;
     	if(elem)
-    		return {pname:elem.textContent, link:elem.getAttribute('href')};
+    		return elem.getAttribute('href');
     	else
     		return null;
     }); 
@@ -25,32 +25,30 @@ function getPlayerPageLink() {
 // Opens casperjs homepage
 casper.start('http://www.easycredit-bbl.de/de/statistiken/spieler/spieler-statistiken/');
 
+//Find links to all player pages
 casper.then(function () {
     //console.log('evaluating');
-    var links = document.querySelectorAll('.aleft');
+    //var linkCells = document.querySelectorAll('.aleft');
     //console.log('Links found:' + this.evaluate(getPlayers));
-    players = this.evaluate(getPlayerPageLink);
+    links = this.evaluate(getPlayerPageLinks);
     //console.log('Found ' + players.length + ' players!');
     //console.log(casper.getPageContent()); 
     //-> Works, does load all players, why is aleft footable-visible not found ?
 });
 
-//Follow links
+//Follow player pages' links
 casper.then(function() {
-	for(pidx = 0;pidx < 10/*players.length*/;pidx++)
+	for(pidx = 0;pidx < links.length;pidx++)
 	{
-		player = players[pidx];
-		if(!player) continue;
-		//console.log('Going to: http://www.easycredit-bbl.de' + player.link + ' for player ' + player.pname);
-		this.thenOpen('http://www.easycredit-bbl.de' + player.link + '?pname=' + encodeURI(player.pname), 
+		link = links[pidx];
+		if(!link) continue;
+		//console.log('Going to: http://www.easycredit-bbl.de' + link);
+		this.thenOpen('http://www.easycredit-bbl.de' + link, 
 			function(a)
 			{
 			//console.log(casper.getPageContent()); 
-			/* Decode parameter */
-			pname = decodeURI(a.url.substring(a.url.indexOf('?pname=') + 7));
-			//console.log('Scraping player: ' + pname);
 			/* Evaluate player page */
-			res = this.evaluate(function(pname) {
+			res = this.evaluate(function() {
 				    var explanation = '';
 				    var matchstats = [];
 				    var playerFirstName;
@@ -166,9 +164,9 @@ casper.then(function() {
 				    	    elem = elem.nextElementSibling;
 				    }
 				    return matchstats; 
-			}, pname); 
+			}); 
 			//console.log(casper.getPageContent());
-			console.log('Result: ' + JSON.stringify(res));
+			//console.log('Result: ' + JSON.stringify(res));
 			
 			/* Postprocess result line */
 			for(i = 0; i<res.length; i++)
@@ -203,9 +201,13 @@ casper.then(function() {
 });
 
 casper.run(function () {
-    /* Output results */
+    /* Output results as JSON list*/
+    console.log('[');
     for(var i in matchstats) {
     	console.log(JSON.stringify(matchstats[i]));
+    	if(i != matchstats.length - 1)
+    	   console.log(',');
     }
+    console.log(']');
     casper.done();
 });
